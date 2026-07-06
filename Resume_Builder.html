@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resume Builder · Live Preview</title>
+<style>
+  /* ============== Design tokens ============== */
+  :root{
+    --navy-900:#0a1f44;
+    --navy-800:#0f2a5e;
+    --navy-700:#16357a;
+    --navy-600:#1e4099;
+    --navy-500:#2754c4;
+    --navy-50:#eef3fc;
+    --navy-100:#d9e3f7;
+    --accent:#0ea5e9;
+    --gold:#d4a24c;
+    --gray-900:#1f2937;
+    --gray-700:#374151;
+    --gray-500:#6b7280;
+    --gray-300:#d1d5db;
+    --gray-200:#e5e7eb;
+    --gray-100:#f3f4f6;
+    --bg:#f4f6fa;
+    --app-fg:#1f2937;
+    --danger:#dc2626;
+    --primary:#2754c4;
+    --primary-hover:#1e4099;
+    --card:#ffffff;
+    --shadow:0 4px 20px rgba(15,42,94,0.08);
+    --shadow-lg:0 10px 40px rgba(15,42,94,0.12);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+    background:var(--bg);
+    color:var(--app-fg);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ============== Top bar ============== */
+  .topbar{
+    height:56px;background:#fff;border-bottom:1px solid var(--gray-200);
+    display:flex;align-items:center;padding:0 20px;gap:14px;
+    position:sticky;top:0;z-index:50;box-shadow:0 1px 4px rgba(0,0,0,0.04);
+  }
+  .topbar .brand{
+    font-size:16px;font-weight:700;color:var(--navy-900);
+    display:flex;align-items:center;gap:8px;letter-spacing:.3px;
+  }
+  .topbar .brand .dot{
+    width:10px;height:10px;border-radius:50%;
+    background:linear-gradient(135deg,var(--gold),#f0c97a);
+  }
+  .topbar .spacer{flex:1}
+  .btn{
+    border:1px solid var(--gray-300);background:#fff;color:var(--gray-700);
+    padding:7px 14px;border-radius:6px;font-size:13px;font-weight:500;
+    cursor:pointer;transition:all .15s;
+  }
+  .btn:hover{background:var(--gray-100);border-color:var(--gray-500)}
+  .btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .btn.primary:hover{background:var(--primary-hover);border-color:var(--primary-hover)}
+  .btn.danger{color:var(--danger);border-color:#f3c0c0;background:#fff5f5}
+  .btn.danger:hover{background:#ffe5e5}
+  .btn.ghost{background:transparent;border-color:transparent}
+  .tab-toggle{display:none}
+
+  /* ============== App shell ============== */
+  .app{
+    display:grid;grid-template-columns:minmax(380px,42%) 1fr;
+    height:calc(100vh - 56px);
+  }
+  .pane{overflow-y:auto;height:100%}
+  .form-pane{background:var(--bg);padding:24px 22px 60px;border-right:1px solid var(--gray-200)}
+  .preview-pane{background:#e9eef5;padding:24px;display:flex;justify-content:center;align-items:flex-start}
+  .preview-frame{
+    background:#fff;
+    width:100%;max-width:980px;
+    box-shadow:0 8px 40px rgba(15,42,94,0.12);
+    border-radius:6px;overflow:hidden;
+  }
+
+  /* ============== Form section card ============== */
+  .form-section{
+    background:#fff;border-radius:10px;padding:20px;
+    margin-bottom:18px;box-shadow:var(--shadow);
+    border:1px solid var(--gray-100);
+  }
+  .form-section h3{
+    font-size:15px;font-weight:700;color:var(--navy-900);
+    margin-bottom:14px;display:flex;align-items:center;gap:8px;
+    letter-spacing:.3px;
+  }
+  .form-section h3 .num{
+    font-size:11px;font-weight:600;color:var(--gold);
+    font-family:"SF Mono",Menlo,monospace;background:var(--navy-50);
+    padding:2px 6px;border-radius:3px;
+  }
+  .form-row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  .form-row.cols-2 > *{flex:1;min-width:120px}
+  .form-row.cols-3 > *{flex:1;min-width:90px}
+  .form-row.cols-1 > *{flex:1;width:100%}
+  .field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px}
+  .field label{font-size:11px;font-weight:600;color:var(--gray-700);letter-spacing:.3px;text-transform:uppercase}
+  .field input,.field textarea,.field select{
+    border:1px solid var(--gray-300);border-radius:6px;
+    padding:8px 10px;font-size:13px;font-family:inherit;
+    background:#fff;color:var(--gray-900);
+    transition:border-color .15s,box-shadow .15s;
+  }
+  .field input:focus,.field textarea:focus,.field select:focus{
+    outline:none;border-color:var(--primary);
+    box-shadow:0 0 0 3px rgba(39,84,196,0.12);
+  }
+  .field textarea{resize:vertical;min-height:90px;line-height:1.5}
+  .field .hint{font-size:11px;color:var(--gray-500)}
+  .field-row-actions{display:flex;justify-content:flex-end;margin-top:4px}
+  .row-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:6px}
+  .icon-btn{
+    border:1px solid var(--gray-300);background:#fff;color:var(--gray-500);
+    width:26px;height:26px;border-radius:5px;cursor:pointer;font-size:14px;
+    display:inline-flex;align-items:center;justify-content:center;
+    transition:all .15s;
+  }
+  .icon-btn:hover{color:var(--danger);border-color:#f3c0c0;background:#fff5f5}
+  .add-btn{
+    background:transparent;color:var(--primary);border:1px dashed var(--primary);
+    padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;
+    width:100%;margin-top:8px;transition:all .15s;
+  }
+  .add-btn:hover{background:var(--navy-50)}
+
+  .item-card{
+    background:var(--gray-100);border-radius:8px;padding:12px;
+    margin-bottom:10px;border:1px solid var(--gray-200);position:relative;
+  }
+  .item-card .item-head{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:8px;font-size:12px;font-weight:600;color:var(--navy-800);
+  }
+  .item-card .item-head .idx{color:var(--gold);font-family:"SF Mono",Menlo,monospace}
+
+  .bullet-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+  .bullet-row input{flex:1}
+  .bullet-row .icon-btn{flex-shrink:0}
+
+  .tag-input-row{display:flex;flex-wrap:wrap;gap:6px;padding:6px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;min-height:38px;align-items:center}
+  .tag-input-row input{border:none;outline:none;flex:1;min-width:80px;padding:4px;font-size:13px;background:transparent}
+  .tag-chip{
+    display:inline-flex;align-items:center;gap:4px;background:var(--navy-50);
+    color:var(--navy-700);border:1px solid var(--navy-100);border-radius:4px;
+    padding:3px 8px;font-size:12px;font-weight:500;
+  }
+  .tag-chip .x{cursor:pointer;color:var(--gray-500);font-size:14px;line-height:1}
+  .tag-chip .x:hover{color:var(--danger)}
+
+  .range-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .range-row input[type=range]{flex:1;accent-color:var(--primary)}
+  .range-row .val{width:42px;text-align:right;font-size:12px;font-weight:600;color:var(--navy-800);font-family:"SF Mono",Menlo,monospace}
+  .range-row .name-input{flex:1;border:1px solid var(--gray-300);border-radius:5px;padding:6px 8px;font-size:13px;background:#fff}
+
+  /* ============== Preview styles (scoped) ============== */
+  .preview-shell{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;color:var(--gray-900);line-height:1.7}
+  .preview-shell .container{max-width:1120px;margin:0 auto;padding:0 32px}
+  .preview-shell header{
+    background:linear-gradient(135deg,var(--navy-900) 0%,var(--navy-700) 60%,var(--navy-500) 100%);
+    color:#fff;padding:48px 0 40px;position:relative;overflow:hidden;
+  }
+  .preview-shell header::before{
+    content:"";position:absolute;top:-120px;right:-120px;width:360px;height:360px;
+    background:radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%);border-radius:50%;
+  }
+  .preview-shell header::after{
+    content:"";position:absolute;bottom:-180px;left:-80px;width:420px;height:420px;
+    background:radial-gradient(circle,rgba(14,165,233,0.18) 0%,transparent 70%);border-radius:50%;
+  }
+  .preview-shell .header-inner{
+    display:flex;align-items:center;gap:32px;position:relative;z-index:1;flex-wrap:wrap;
+  }
+  .preview-shell .avatar{
+    width:110px;height:110px;border-radius:50%;
+    background:linear-gradient(135deg,var(--gold) 0%,#f0c97a 100%);
+    display:flex;align-items:center;justify-content:center;
+    font-size:46px;font-weight:700;color:var(--navy-900);
+    box-shadow:0 8px 30px rgba(0,0,0,0.3);
+    border:4px solid rgba(255,255,255,0.15);flex-shrink:0;
+  }
+  .preview-shell .header-text h1{font-size:38px;font-weight:700;letter-spacing:1px;margin-bottom:6px}
+  .preview-shell .header-text .role{font-size:17px;color:var(--navy-100);font-weight:300;margin-bottom:14px}
+  .preview-shell .header-text .role strong{color:var(--gold);font-weight:600}
+  .preview-shell .contact-row{display:flex;flex-wrap:wrap;gap:14px 22px;font-size:13px;color:rgba(255,255,255,0.85)}
+  .preview-shell .contact-row span{display:inline-flex;align-items:center;gap:5px}
+  .preview-shell .contact-row .ico{
+    width:16px;height:16px;border-radius:50%;
+    background:rgba(255,255,255,0.15);display:inline-flex;align-items:center;justify-content:center;font-size:10px;
+  }
+  .preview-shell .tagline{
+    background:var(--navy-50);border-bottom:1px solid var(--navy-100);padding:12px 0;
+  }
+  .preview-shell .tagline-inner{
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+    font-size:13px;color:var(--navy-800);
+  }
+  .preview-shell .tagline .pill{
+    display:inline-block;padding:3px 10px;background:#fff;border:1px solid var(--navy-100);
+    border-radius:999px;margin-right:4px;font-size:12px;color:var(--navy-700);font-weight:500;
+  }
+  .preview-shell section{padding:36px 0}
+  .preview-shell section + section{border-top:1px solid var(--gray-100)}
+  .preview-shell .section-title{
+    display:flex;align-items:center;gap:12px;margin-bottom:24px;
+  }
+  .preview-shell .section-title h2{font-size:22px;font-weight:700;color:var(--navy-900);letter-spacing:.5px}
+  .preview-shell .section-title .bar{flex:1;height:2px;background:linear-gradient(90deg,var(--navy-100) 0%,transparent 100%)}
+  .preview-shell .section-title .num{font-size:13px;font-weight:600;color:var(--gold);font-family:"SF Mono",Menlo,monospace}
+  .preview-shell .bio-card{
+    background:#fff;border-left:4px solid var(--navy-500);padding:22px 26px;
+    border-radius:8px;box-shadow:var(--shadow);font-size:15px;color:var(--gray-700);line-height:1.85;
+  }
+  .preview-shell .bio-card .highlight{color:var(--navy-700);font-weight:600}
+  .preview-shell .stats-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;
+  }
+  .preview-shell .stat-card{
+    background:#fff;border-radius:10px;padding:22px 20px;
+    box-shadow:var(--shadow);position:relative;overflow:hidden;
+    border:1px solid var(--gray-100);
+  }
+  .preview-shell .stat-card::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,var(--navy-500),var(--accent));
+  }
+  .preview-shell .stat-num{
+    font-size:36px;font-weight:800;color:var(--navy-700);
+    line-height:1;letter-spacing:-1px;
+  }
+  .preview-shell .stat-num small{font-size:16px;color:var(--accent);font-weight:600}
+  .preview-shell .stat-label{margin-top:8px;font-size:14px;color:var(--gray-700);font-weight:500}
+  .preview-shell .stat-sub{margin-top:3px;font-size:11px;color:var(--gray-500)}
+  .preview-shell .timeline{position:relative;padding-left:30px}
+  .preview-shell .timeline::before{
+    content:"";position:absolute;left:10px;top:6px;bottom:6px;
+    width:2px;background:linear-gradient(180deg,var(--navy-500),var(--navy-100));
+  }
+  .preview-shell .tl-item{position:relative;margin-bottom:28px}
+  .preview-shell .tl-item:last-child{margin-bottom:0}
+  .preview-shell .tl-item::before{
+    content:"";position:absolute;left:-26px;top:5px;width:14px;height:14px;
+    border-radius:50%;background:#fff;border:3px solid var(--navy-500);
+    box-shadow:0 0 0 3px rgba(39,84,196,0.12);
+  }
+  .preview-shell .tl-period{
+    display:inline-block;background:var(--navy-50);color:var(--navy-700);
+    padding:2px 10px;border-radius:4px;font-size:12px;font-weight:600;
+    font-family:"SF Mono",Menlo,monospace;margin-bottom:8px;
+  }
+  .preview-shell .tl-title{font-size:18px;font-weight:700;color:var(--navy-900);margin-bottom:3px}
+  .preview-shell .tl-company{font-size:13px;color:var(--gold);font-weight:600;margin-bottom:10px}
+  .preview-shell .tl-bullets{list-style:none;padding:0}
+  .preview-shell .tl-bullets li{
+    position:relative;padding-left:20px;margin-bottom:8px;
+    color:var(--gray-700);font-size:14px;
+  }
+  .preview-shell .tl-bullets li::before{
+    content:"▸";position:absolute;left:0;top:0;color:var(--navy-500);font-weight:bold;
+  }
+  .preview-shell .tl-bullets li b{color:var(--navy-800)}
+  .preview-shell .skills-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+  .preview-shell .radar-wrap,.preview-shell .tag-cloud,.preview-shell .tools-card{
+    background:#fff;border-radius:10px;padding:20px;
+    box-shadow:var(--shadow);border:1px solid var(--gray-100);
+  }
+  .preview-shell .skill-list{list-style:none;padding:0}
+  .preview-shell .skill-list li{margin-bottom:14px}
+  .preview-shell .skill-head{
+    display:flex;justify-content:space-between;margin-bottom:4px;
+    font-size:13px;color:var(--gray-700);
+  }
+  .preview-shell .skill-head b{color:var(--navy-800);font-weight:600}
+  .preview-shell .skill-bar{height:7px;background:var(--gray-100);border-radius:4px;overflow:hidden}
+  .preview-shell .skill-fill{height:100%;background:linear-gradient(90deg,var(--navy-500),var(--accent));border-radius:4px}
+  .preview-shell .tag-cloud h3,.preview-shell .tools-card h3{
+    font-size:15px;color:var(--navy-900);margin-bottom:12px;font-weight:700;
+  }
+  .preview-shell .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .preview-shell .tag{
+    padding:5px 12px;background:var(--navy-50);color:var(--navy-700);
+    border-radius:5px;font-size:12px;font-weight:500;border:1px solid var(--navy-100);
+  }
+  .preview-shell .tag.tool{background:#fff7e6;color:#a06900;border-color:#fde8b8}
+  .preview-shell .edu-card{
+    background:#fff;border-radius:10px;padding:22px;
+    box-shadow:var(--shadow);border:1px solid var(--gray-100);
+    display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+  }
+  .preview-shell .edu-logo{
+    width:56px;height:56px;border-radius:10px;
+    background:linear-gradient(135deg,var(--navy-700),var(--navy-500));
+    color:#fff;display:flex;align-items:center;justify-content:center;
+    font-size:18px;font-weight:700;flex-shrink:0;
+  }
+  .preview-shell .edu-info{flex:1;min-width:180px}
+  .preview-shell .edu-school{font-size:18px;font-weight:700;color:var(--navy-900)}
+  .preview-shell .edu-major{color:var(--gray-700);margin-top:3px;font-size:14px}
+  .preview-shell .edu-meta{color:var(--gray-500);font-size:12px;margin-top:4px}
+  .preview-shell footer{
+    background:var(--navy-900);color:rgba(255,255,255,0.7);
+    text-align:center;padding:22px 20px;font-size:12px;
+  }
+  .preview-shell footer .gold{color:var(--gold)}
+  .preview-shell .empty-state{color:var(--gray-500);font-style:italic;font-size:13px;padding:6px 0}
+
+  /* ============== Responsive ============== */
+  @media (max-width:1023px){
+    .app{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:768px){
+    .topbar{padding:0 12px;gap:8px}
+    .topbar .brand span:last-child{display:none}
+    .btn{padding:6px 10px;font-size:12px}
+    .tab-toggle{display:flex;background:var(--navy-50);border:1px solid var(--navy-100);border-radius:6px;overflow:hidden}
+    .tab-toggle button{
+      border:none;background:transparent;padding:6px 12px;font-size:12px;font-weight:600;
+      color:var(--navy-800);cursor:pointer;
+    }
+    .tab-toggle button.active{background:var(--primary);color:#fff}
+    .app{grid-template-columns:1fr;height:auto}
+    .pane{height:auto}
+    .form-pane{border-right:none;border-bottom:1px solid var(--gray-200);display:block}
+    .preview-pane{padding:14px}
+    .app.preview-mode .form-pane{display:none}
+    .app.form-mode .preview-pane{display:none}
+    .preview-shell .header-text h1{font-size:28px}
+    .preview-shell .avatar{width:80px;height:80px;font-size:32px}
+    .preview-shell .skills-grid{grid-template-columns:1fr}
+  }
+
+  /* ============== Print ============== */
+  @media print{
+    .topbar,.form-pane{display:none !important}
+    .app{grid-template-columns:1fr;height:auto}
+    .preview-pane{background:#fff;padding:0}
+    .preview-frame{box-shadow:none;border-radius:0;max-width:100%}
+    .preview-shell section{padding:20px 0}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="dot"></span><span>Resume Builder</span></div>
+  <div class="tab-toggle" id="tabToggle">
+    <button data-mode="form" class="active">Edit</button>
+    <button data-mode="preview">Preview</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="loadDemoBtn">Load demo</button>
+  <button class="btn danger" id="resetBtn">Reset</button>
+  <button class="btn" id="exportBtn">Export HTML</button>
+  <button class="btn primary" id="printBtn">Print / PDF</button>
+</div>
+
+<div class="app form-mode" id="app">
+  <!-- ============== Form pane ============== -->
+  <div class="pane form-pane" id="formPane">
+
+    <div class="form-section">
+      <h3><span class="num">01</span>Profile</h3>
+      <div class="form-row cols-2">
+        <div class="field">
+          <label>Full name</label>
+          <input type="text" data-bind="profile.name" placeholder="Zhang Ming">
+        </div>
+        <div class="field">
+          <label>Avatar initials</label>
+          <input type="text" data-bind="profile.avatarText" maxlength="2" placeholder="Z">
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:10px">
+        <label>Headline / seeking role</label>
+        <input type="text" data-bind="profile.role" placeholder="Seeking: Senior Product Manager · B2B SaaS">
+        <div class="hint">Use **text** to bold (e.g. Senior **Product Manager**)</div>
+      </div>
+      <div class="form-row cols-2">
+        <div class="field">
+          <label>Email</label>
+          <input type="text" data-bind="profile.email" placeholder="you@email.com">
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input type="text" data-bind="profile.phone" placeholder="+86 ...">
+        </div>
+      </div>
+      <div class="form-row cols-2">
+        <div class="field">
+          <label>Location</label>
+          <input type="text" data-bind="profile.location" placeholder="Hangzhou, Zhejiang">
+        </div>
+        <div class="field">
+          <label>LinkedIn / Web</label>
+          <input type="text" data-bind="profile.linkedin" placeholder="linkedin.com/in/...">
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>Tagline pills (press Enter to add)</label>
+        <div class="tag-input-row" id="pillsRow">
+          <input type="text" id="pillsInput" placeholder="e.g. 3 Years in B2B">
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>Right-side note (e.g. availability)</label>
+        <input type="text" data-bind="profile.availability" placeholder="27 y/o · ZJU B.Sc. · Available within 1 month">
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3><span class="num">02</span>Profile summary</h3>
+      <div class="field">
+        <label>Bio paragraph</label>
+        <textarea data-bind="bio" placeholder="3-year B2B SaaS PM with..."></textarea>
+        <div class="hint">Wrap key phrases in **double asterisks** to bold them.</div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3><span class="num">03</span>Key highlights</h3>
+      <div id="highlightsList"></div>
+      <button class="add-btn" id="addHighlightBtn">+ Add highlight</button>
+    </div>
+
+    <div class="form-section">
+      <h3><span class="num">04</span>Work experience</h3>
+      <div id="expList"></div>
+      <button class="add-btn" id="addExpBtn">+ Add experience</button>
+    </div>
+
+    <div class="form-section">
+      <h3><span class="num">05</span>Skills</h3>
+      <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.3px">Radar axes (3–8 recommended)</div>
+      <div id="radarList"></div>
+      <button class="add-btn" id="addRadarBtn">+ Add axis</button>
+      <div style="margin-top:18px">
+        <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.3px">Toolbox &amp; methods (press Enter to add)</div>
+        <div class="tag-input-row" id="toolsRow">
+          <input type="text" id="toolsInput" placeholder="e.g. SQL">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3><span class="num">06</span>Education</h3>
+      <div class="form-row cols-2">
+        <div class="field">
+          <label>School</label>
+          <input type="text" data-bind="education.school">
+        </div>
+        <div class="field">
+          <label>Logo text</label>
+          <input type="text" data-bind="education.logoText" maxlength="4" placeholder="ZJU">
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>Major / degree</label>
+        <input type="text" data-bind="education.major">
+      </div>
+      <div class="form-row cols-2" style="margin-top:10px">
+        <div class="field">
+          <label>Period</label>
+          <input type="text" data-bind="education.period">
+        </div>
+        <div class="field">
+          <label>GPA / awards</label>
+          <input type="text" data-bind="education.gpa">
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>Core courses</label>
+        <input type="text" data-bind="education.courses">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============== Preview pane ============== -->
+  <div class="pane preview-pane" id="previewPane">
+    <div class="preview-frame">
+      <div class="preview-shell" id="preview"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===========================================================
+   Resume Builder — vanilla JS
+   =========================================================== */
+const STORAGE_KEY = 'resumeBuilderData_v1';
+
+const DEMO = {
+  profile: {
+    name: 'Zhang Ming',
+    avatarText: 'Z',
+    role: 'Seeking: **Senior Product Manager** · B2B SaaS',
+    email: 'zhangming.pm@email.com',
+    phone: '+86 138-0000-0000',
+    location: 'Hangzhou, Zhejiang',
+    linkedin: 'linkedin.com/in/zhangming-pm',
+    pills: ['3 Years in B2B','Collaboration SaaS','E-commerce SaaS','0→1 / 1→10 Experience'],
+    availability: '27 y/o · ZJU B.Sc. · Available within 1 month'
+  },
+  bio: "Product Manager with **3 years of B2B SaaS experience**, focused on enterprise collaboration and e-commerce back-office products. Proven track record of **building MVPs from 0→1** and scaling mature products through **data-driven iteration**. Full-stack ownership of user research → requirements → agile development → launch → operation. Skilled in SQL/Python data analysis and Axure/Figma prototyping. Led a 5-person product team with hands-on **cross-functional collaboration and people management** experience. Looking to step into a Senior PM role to keep solving real problems for enterprise customers in B2B SaaS.",
+  highlights: [
+    { num: '+35', suffix: '%', label: 'DAU growth after real-time co-editing launch', sub: 'Led the core feature for the collaboration suite' },
+    { num: '72→88', suffix: '%', label: 'Renewal rate up 16 percentage points', sub: 'Driven by UX and lifecycle optimization' },
+    { num: '50', suffix: '+', label: 'First batch of paying customers at MVP', sub: 'Built the e-commerce SaaS back office 0→1' },
+    { num: '5', suffix: '', label: 'Product team members led', sub: 'Reviews / cadence / coaching' }
+  ],
+  experiences: [
+    {
+      period: 'Jul 2023 — Present',
+      title: 'Product Manager',
+      company: 'Mid-size Internet Company · Enterprise Collaboration BU',
+      bullets: [
+        'Own the product roadmap for the **enterprise collaboration suite**, spanning document co-editing, project management, and team chat — serving thousands of paying enterprise customers.',
+        'Led the **real-time co-editing** feature end-to-end, owning decisions on collaborative locks, version merging, and conflict resolution. Post-launch, **core DAU grew 35%**, making it the company\'s Top 3 initiative of the year.',
+        'Improved onboarding and conversion funnels through user research and event analytics, lifting the **renewal rate from 72% to 88%** and contributing tens of millions of RMB in incremental ARR.',
+        'Managed a **5-person product team** — review cadence, release planning, and growth coaching. Team rated A-grade for two consecutive quarters.',
+        'Established a weekly business sync across Engineering, Design, Sales, and CS, materially improving cross-team velocity.'
+      ]
+    },
+    {
+      period: 'Mar 2022 — Jun 2023',
+      title: 'Associate Product Manager',
+      company: 'Startup · E-commerce SaaS Division',
+      bullets: [
+        'Built the **e-commerce SaaS merchant back office 0→1**, covering catalog, orders, fulfillment, inventory, marketing, and analytics.',
+        'Drove MVP design and delivery; core features shipped within 3 months, validating the business model with **50+ paying customers in the first batch**.',
+        'Conducted deep customer interviews and distilled 30+ recurring pain points into a reusable merchant-back-office functional framework for subsequent iterations.',
+        'Owned the full lifecycle independently: competitive analysis, PRD writing, prototyping (Axure/Figma), event tracking, and post-launch evaluation.',
+        'Partnered with Sales and Customer Success on product training; produced product playbooks and best-practice docs to lift service efficiency.'
+      ]
+    }
+  ],
+  skills: {
+    radar: [
+      { name: 'User Research', score: 90 },
+      { name: 'Data Analysis', score: 85 },
+      { name: 'B2B Domain',   score: 90 },
+      { name: 'Agile Dev',    score: 88 },
+      { name: 'Prototyping',  score: 92 }
+    ],
+    tools: ['User Interviews','A/B Testing','Data Analysis','SQL','Python','Requirements Mgmt','Scrum','OKR','PRD Writing','Event Tracking','Axure','Figma','Jira','Notion','Tableau']
+  },
+  education: {
+    school: 'Zhejiang University',
+    logoText: 'ZJU',
+    major: 'Computer Science & Technology · B.Sc.',
+    period: 'Sep 2017 — Jun 2021',
+    gpa: 'GPA 3.7/4.0 · University Scholarship ×3',
+    courses: 'Data Structures · Databases · HCI · Software Engineering'
+  }
+};
+
+let state = loadState();
+
+/* ---------- persistence ---------- */
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ return JSON.parse(raw); }
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEMO));
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+/* ---------- helpers ---------- */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function md(s){return esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}
+
+/* ---------- form bindings ---------- */
+function bindInputs(){
+  document.querySelectorAll('[data-bind]').forEach(el=>{
+    const path = el.getAttribute('data-bind');
+    const v = getPath(state, path);
+    if(v != null) el.value = v;
+    el.addEventListener('input', ()=>{
+      setPath(state, path, el.value);
+      saveState();
+      renderPreview();
+    });
+  });
+  // pills
+  const pillsInput = document.getElementById('pillsInput');
+  pillsInput.addEventListener('keydown', e=>{
+    if(e.key==='Enter' || e.key===','){
+      e.preventDefault();
+      const v = pillsInput.value.trim().replace(/,$/,'');
+      if(v){ state.profile.pills.push(v); pillsInput.value=''; saveState(); renderPills(); renderPreview(); }
+    } else if(e.key==='Backspace' && !pillsInput.value && state.profile.pills.length){
+      state.profile.pills.pop(); saveState(); renderPills(); renderPreview();
+    }
+  });
+  // tools
+  const toolsInput = document.getElementById('toolsInput');
+  toolsInput.addEventListener('keydown', e=>{
+    if(e.key==='Enter' || e.key===','){
+      e.preventDefault();
+      const v = toolsInput.value.trim().replace(/,$/,'');
+      if(v){ state.skills.tools.push(v); toolsInput.value=''; saveState(); renderToolsChips(); renderPreview(); }
+    } else if(e.key==='Backspace' && !toolsInput.value && state.skills.tools.length){
+      state.skills.tools.pop(); saveState(); renderToolsChips(); renderPreview();
+    }
+  });
+}
+
+function getPath(o, p){return p.split('.').reduce((a,k)=>a==null?undefined:a[k], o)}
+function setPath(o, p, v){
+  const keys = p.split('.');
+  const last = keys.pop();
+  const parent = keys.reduce((a,k)=>a[k]=a[k]||{}, o);
+  parent[last] = v;
+}
+
+/* ---------- highlight rows ---------- */
+function renderHighlights(){
+  const wrap = document.getElementById('highlightsList');
+  wrap.innerHTML = '';
+  state.highlights.forEach((h,i)=>{
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.innerHTML = `
+      <div class="item-head">
+        <span class="idx">#${i+1}</span>
+        <button class="icon-btn" data-act="del-hl" data-i="${i}" title="Remove">×</button>
+      </div>
+      <div class="form-row cols-3">
+        <div class="field"><label>Big number</label><input type="text" data-h="${i}.num" value="${esc(h.num)}" placeholder="+35"></div>
+        <div class="field"><label>Suffix</label><input type="text" data-h="${i}.suffix" value="${esc(h.suffix)}" placeholder="%"></div>
+        <div class="field"><label>Label</label><input type="text" data-h="${i}.label" value="${esc(h.label)}"></div>
+      </div>
+      <div class="field" style="margin-top:6px"><label>Sub-line</label><input type="text" data-h="${i}.sub" value="${esc(h.sub)}"></div>
+    `;
+    wrap.appendChild(card);
+  });
+  wrap.querySelectorAll('[data-h]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const [i, key] = inp.dataset.h.split('.');
+      state.highlights[+i][key] = inp.value;
+      saveState(); renderPreview();
+    });
+  });
+  wrap.querySelectorAll('[data-act=del-hl]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const i = +btn.dataset.i;
+      state.highlights.splice(i,1); saveState(); renderHighlights(); renderPreview();
+    });
+  });
+}
+
+/* ---------- experience cards ---------- */
+function renderExperiences(){
+  const wrap = document.getElementById('expList');
+  wrap.innerHTML = '';
+  state.experiences.forEach((ex,i)=>{
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    let bulletsHtml = ex.bullets.map((b,j)=>`
+      <div class="bullet-row">
+        <input type="text" data-b="${i}.${j}" value="${esc(b)}" placeholder="Achievement (wrap key phrases in **double asterisks**)">
+        <button class="icon-btn" data-act="del-b" data-i="${i}" data-j="${j}" title="Remove bullet">×</button>
+      </div>
+    `).join('');
+    card.innerHTML = `
+      <div class="item-head">
+        <span class="idx">#${i+1}</span>
+        <button class="icon-btn" data-act="del-ex" data-i="${i}" title="Remove experience">×</button>
+      </div>
+      <div class="form-row cols-2">
+        <div class="field"><label>Period</label><input type="text" data-e="${i}.period" value="${esc(ex.period)}"></div>
+        <div class="field"><label>Title</label><input type="text" data-e="${i}.title" value="${esc(ex.title)}"></div>
+      </div>
+      <div class="field" style="margin-top:6px"><label>Company · team</label><input type="text" data-e="${i}.company" value="${esc(ex.company)}"></div>
+      <div style="margin-top:8px">
+        <div style="font-size:11px;font-weight:600;color:var(--gray-700);letter-spacing:.3px;text-transform:uppercase;margin-bottom:6px">Bullets</div>
+        ${bulletsHtml}
+        <button class="add-btn" data-act="add-b" data-i="${i}">+ Add bullet</button>
+      </div>
+    `;
+    wrap.appendChild(card);
+  });
+  wrap.querySelectorAll('[data-e]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const [i, key] = inp.dataset.e.split('.');
+      state.experiences[+i][key] = inp.value;
+      saveState(); renderPreview();
+    });
+  });
+  wrap.querySelectorAll('[data-b]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const [i, j] = inp.dataset.b.split('.');
+      state.experiences[+i].bullets[+j] = inp.value;
+      saveState(); renderPreview();
+    });
+  });
+  wrap.querySelectorAll('[data-act=del-ex]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const i = +btn.dataset.i;
+      state.experiences.splice(i,1); saveState(); renderExperiences(); renderPreview();
+    });
+  });
+  wrap.querySelectorAll('[data-act=del-b]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const {i,j} = btn.dataset;
+      state.experiences[+i].bullets.splice(+j,1);
+      saveState(); renderExperiences(); renderPreview();
+    });
+  });
+  wrap.querySelectorAll('[data-act=add-b]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const i = +btn.dataset.i;
+      state.experiences[i].bullets.push('');
+      saveState(); renderExperiences(); renderPreview();
+    });
+  });
+}
+
+/* ---------- radar axes ---------- */
+function renderRadar(){
+  const wrap = document.getElementById('radarList');
+  wrap.innerHTML = '';
+  state.skills.radar.forEach((ax,i)=>{
+    const row = document.createElement('div');
+    row.className = 'range-row';
+    row.innerHTML = `
+      <input type="text" class="name-input" data-r="${i}.name" value="${esc(ax.name)}" placeholder="Axis name">
+      <input type="range" min="0" max="100" step="1" data-r="${i}.score" value="${ax.score}">
+      <span class="val">${ax.score}</span>
+      <button class="icon-btn" data-act="del-r" data-i="${i}" title="Remove">×</button>
+    `;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll('[data-r]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{
+      const [i, key] = inp.dataset.r.split('.');
+      if(key==='score'){ state.skills.radar[+i][key] = +inp.value; inp.nextElementSibling.textContent = inp.value; }
+      else state.skills.radar[+i][key] = inp.value;
+      saveState(); renderPreview();
+    });
+  });
+  wrap.querySelectorAll('[data-act=del-r]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const i = +btn.dataset.i;
+      state.skills.radar.splice(i,1); saveState(); renderRadar(); renderPreview();
+    });
+  });
+}
+
+/* ---------- pills + tools chips ---------- */
+function renderPills(){
+  const row = document.getElementById('pillsRow');
+  row.querySelectorAll('.tag-chip').forEach(n=>n.remove());
+  state.profile.pills.forEach((p,i)=>{
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.innerHTML = `${esc(p)}<span class="x" data-p="${i}">×</span>`;
+    row.insertBefore(chip, row.firstChild);
+  });
+  row.querySelectorAll('[data-p]').forEach(x=>{
+    x.addEventListener('click', ()=>{
+      const i = +x.dataset.p;
+      state.profile.pills.splice(i,1); saveState(); renderPills(); renderPreview();
+    });
+  });
+}
+function renderToolsChips(){
+  const row = document.getElementById('toolsRow');
+  row.querySelectorAll('.tag-chip').forEach(n=>n.remove());
+  state.skills.tools.forEach((t,i)=>{
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.innerHTML = `${esc(t)}<span class="x" data-t="${i}">×</span>`;
+    row.insertBefore(chip, row.firstChild);
+  });
+  row.querySelectorAll('[data-t]').forEach(x=>{
+    x.addEventListener('click', ()=>{
+      const i = +x.dataset.t;
+      state.skills.tools.splice(i,1); saveState(); renderToolsChips(); renderPreview();
+    });
+  });
+}
+
+/* ---------- preview render ---------- */
+function renderPreview(){
+  const p = state.profile;
+  const ed = state.education;
+  const init = (p.avatarText || (p.name||'?').trim()[0] || '?').toUpperCase().slice(0,2);
+  const contact = [
+    p.email && `<span><span class="ico">✉</span>${esc(p.email)}</span>`,
+    p.phone && `<span><span class="ico">☎</span>${esc(p.phone)}</span>`,
+    p.location && `<span><span class="ico">📍</span>${esc(p.location)}</span>`,
+    p.linkedin && `<span><span class="ico">in</span>${esc(p.linkedin)}</span>`
+  ].filter(Boolean).join('');
+
+  const pillsHtml = p.pills.length
+    ? p.pills.map(x=>`<span class="pill">${esc(x)}</span>`).join('')
+    : '<span class="empty-state">No pills yet</span>';
+
+  const highlightsHtml = state.highlights.length
+    ? `<div class="stats-grid">${state.highlights.map(h=>`
+        <div class="stat-card">
+          <div class="stat-num">${esc(h.num)}${h.suffix?`<small>${esc(h.suffix)}</small>`:''}</div>
+          <div class="stat-label">${esc(h.label)}</div>
+          ${h.sub?`<div class="stat-sub">${esc(h.sub)}</div>`:''}
+        </div>`).join('')}</div>`
+    : '<div class="empty-state">No highlights yet — add some using the form.</div>';
+
+  const expHtml = state.experiences.length
+    ? `<div class="timeline">${state.experiences.map(ex=>`
+        <div class="tl-item">
+          <div class="tl-period">${esc(ex.period)}</div>
+          <div class="tl-title">${esc(ex.title)}</div>
+          <div class="tl-company">${esc(ex.company)}</div>
+          <ul class="tl-bullets">${ex.bullets.filter(Boolean).map(b=>`<li>${md(b)}</li>`).join('')}</ul>
+        </div>`).join('')}</div>`
+    : '<div class="empty-state">No work experience yet.</div>';
+
+  const radarHtml = renderRadarSvg(state.skills.radar);
+  const skillBarsHtml = state.skills.radar.length
+    ? `<ul class="skill-list">${state.skills.radar.map(ax=>`
+        <li>
+          <div class="skill-head"><b>${esc(ax.name)}</b><span>${ax.score}%</span></div>
+          <div class="skill-bar"><div class="skill-fill" style="width:${ax.score}%"></div></div>
+        </li>`).join('')}</ul>`
+    : '<div class="empty-state">Add axes on the left.</div>';
+
+  const toolsHtml = state.skills.tools.length
+    ? state.skills.tools.map(t=>`<span class="tag tool">${esc(t)}</span>`).join('')
+    : '<span class="empty-state">No tools yet</span>';
+
+  document.getElementById('preview').innerHTML = `
+    <header>
+      <div class="container header-inner">
+        <div class="avatar">${esc(init)}</div>
+        <div class="header-text">
+          <h1>${esc(p.name || 'Your Name')}</h1>
+          <div class="role">${md(p.role || 'Seeking: **Senior Product Manager**')}</div>
+          <div class="contact-row">${contact}</div>
+        </div>
+      </div>
+    </header>
+    <div class="tagline">
+      <div class="container tagline-inner">
+        <div>${pillsHtml}</div>
+        <div>${esc(p.availability || '')}</div>
+      </div>
+    </div>
+
+    <section>
+      <div class="container">
+        <div class="section-title"><span class="num">01</span><h2>Profile</h2><span class="bar"></span></div>
+        <div class="bio-card">${md(state.bio || 'Write your bio on the left →')}</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-title"><span class="num">02</span><h2>Key Highlights</h2><span class="bar"></span></div>
+        ${highlightsHtml}
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-title"><span class="num">03</span><h2>Work Experience</h2><span class="bar"></span></div>
+        ${expHtml}
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-title"><span class="num">04</span><h2>Skills</h2><span class="bar"></span></div>
+        <div class="skills-grid">
+          <div class="radar-wrap">${radarHtml}</div>
+          <div class="tag-cloud"><h3>Core Competencies</h3>${skillBarsHtml}</div>
+        </div>
+        <div class="tools-card" style="margin-top:18px">
+          <h3>Toolbox &amp; Methods</h3>
+          <div class="tags">${toolsHtml}</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-title"><span class="num">05</span><h2>Education</h2><span class="bar"></span></div>
+        <div class="edu-card">
+          <div class="edu-logo">${esc(ed.logoText || (ed.school||'?').slice(0,3).toUpperCase())}</div>
+          <div class="edu-info">
+            <div class="edu-school">${esc(ed.school || 'School')}</div>
+            <div class="edu-major">${esc(ed.major || '')}</div>
+            <div class="edu-meta">${esc(ed.period || '')}${ed.gpa?' · '+esc(ed.gpa):''}</div>
+          </div>
+          <div style="text-align:right;color:var(--gray-500);font-size:12px">
+            <div>Core Courses</div>
+            <div style="margin-top:4px;color:var(--gray-700)">${esc(ed.courses || '')}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div>Thanks for your time · Looking forward to connecting <span class="gold">★</span> Updated · ${new Date().getFullYear()}</div>
+    </footer>
+  `;
+}
+
+/* ---------- SVG radar (dynamic) ---------- */
+function renderRadarSvg(axes){
+  if(!axes.length){
+    return '<div class="empty-state" style="padding:60px 0;text-align:center">Add skill axes to draw a radar.</div>';
+  }
+  const N = axes.length;
+  const cx = 200, cy = 200, R = 160;
+  const angle = i => (-Math.PI/2) + (2*Math.PI*i)/N; // start at top
+  // grid rings
+  let grid = '';
+  for(let k=1;k<=4;k++){
+    const r = R*k/4;
+    const pts = Array.from({length:N}, (_,i)=>{
+      const a = angle(i);
+      return `${cx + r*Math.cos(a)},${cy + r*Math.sin(a)}`;
+    }).join(' ');
+    grid += `<polygon points="${pts}" opacity="${0.6 - k*0.1}"/>`;
+  }
+  // axes lines
+  let lines = axes.map((_,i)=>{
+    const a = angle(i);
+    return `<line x1="${cx}" y1="${cy}" x2="${cx + R*Math.cos(a)}" y2="${cy + R*Math.sin(a)}"/>`;
+  }).join('');
+  // data polygon
+  const dataPts = axes.map((ax,i)=>{
+    const a = angle(i);
+    const r = R * (ax.score/100);
+    return `${cx + r*Math.cos(a)},${cy + r*Math.sin(a)}`;
+  }).join(' ');
+  const dataCircles = axes.map((ax,i)=>{
+    const a = angle(i);
+    const r = R * (ax.score/100);
+    return `<circle cx="${cx + r*Math.cos(a)}" cy="${cy + r*Math.sin(a)}" r="4"/>`;
+  }).join('');
+  // labels + scores
+  const labelOffset = 22;
+  const labels = axes.map((ax,i)=>{
+    const a = angle(i);
+    const lx = cx + (R+labelOffset)*Math.cos(a);
+    const ly = cy + (R+labelOffset)*Math.sin(a);
+    // horizontal anchor: avoid edge clipping
+    const cosA = Math.cos(a);
+    let anchor = 'middle';
+    if(cosA > 0.2) anchor = 'start';
+    else if(cosA < -0.2) anchor = 'end';
+    // score position: along axis, slightly inside the data point
+    const sr = R * (ax.score/100) - 14;
+    const sx = cx + sr*Math.cos(a);
+    const sy = cy + sr*Math.sin(a);
+    return `
+      <text x="${lx}" y="${ly}" font-size="13" font-weight="600" fill="#0a1f44" text-anchor="${anchor}">${esc(ax.name)}</text>
+      <text x="${sx}" y="${sy}" font-size="11" fill="#0ea5e9" text-anchor="${anchor}" font-weight="700">${ax.score}</text>
+    `;
+  }).join('');
+
+  return `
+    <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+      <defs>
+        <linearGradient id="rbRadarFill" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#2754c4" stop-opacity="0.45"/>
+          <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.25"/>
+        </linearGradient>
+      </defs>
+      <g fill="none" stroke="#d9e3f7" stroke-width="1">${grid}</g>
+      <g stroke="#d9e3f7" stroke-width="1">${lines}</g>
+      <g fill="url(#rbRadarFill)" stroke="#2754c4" stroke-width="2" stroke-linejoin="round">
+        <polygon points="${dataPts}"/>
+      </g>
+      <g fill="#2754c4">${dataCircles}</g>
+      ${labels}
+    </svg>
+  `;
+}
+
+/* ---------- top bar actions ---------- */
+document.getElementById('addHighlightBtn').addEventListener('click', ()=>{
+  state.highlights.push({ num: '', suffix: '', label: '', sub: '' });
+  saveState(); renderHighlights(); renderPreview();
+});
+document.getElementById('addExpBtn').addEventListener('click', ()=>{
+  state.experiences.push({ period: '', title: '', company: '', bullets: [''] });
+  saveState(); renderExperiences(); renderPreview();
+});
+document.getElementById('addRadarBtn').addEventListener('click', ()=>{
+  state.skills.radar.push({ name: 'New Skill', score: 70 });
+  saveState(); renderRadar(); renderPreview();
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(confirm('Clear all data and reload the demo resume?')){
+    state = JSON.parse(JSON.stringify(DEMO));
+    saveState(); rerenderAll();
+  }
+});
+document.getElementById('loadDemoBtn').addEventListener('click', ()=>{
+  if(confirm('Replace current data with the demo? Unsaved edits will be lost.')){
+    state = JSON.parse(JSON.stringify(DEMO));
+    saveState(); rerenderAll();
+  }
+});
+
+document.getElementById('printBtn').addEventListener('click', ()=>{
+  // switch to preview mode on mobile so the print styles behave
+  const app = document.getElementById('app');
+  app.classList.remove('form-mode'); app.classList.add('preview-mode');
+  setTimeout(()=>window.print(), 50);
+});
+
+document.getElementById('exportBtn').addEventListener('click', exportHtml);
+
+function exportHtml(){
+  const previewHtml = document.getElementById('preview').innerHTML;
+  // Build a standalone HTML with the same scoped CSS
+  const css = collectPreviewCss();
+  const name = (state.profile.name || 'resume').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'resume';
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${esc(state.profile.name || 'Resume')}</title>
+<style>${css}</style>
+</head>
+<body>
+<div class="preview-shell">${previewHtml}</div>
+</body>
+</html>`;
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${name}-resume.html`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+function collectPreviewCss(){
+  // Extract the rules we need by name. Simpler: serialize the .preview-shell rules
+  // from a <style> we already have. We do it by reading the document's stylesheet
+  // and selecting rules whose selector text matches ".preview-shell ...".
+  const out = [];
+  for(const sheet of document.styleSheets){
+    let rules;
+    try{ rules = sheet.cssRules; }catch(e){ continue; }
+    if(!rules) continue;
+    for(const rule of rules){
+      if(rule.type !== CSSRule.STYLE_RULE) continue;
+      if(/\.preview-shell/.test(rule.selectorText) ||
+         /@media\s+print/.test(rule.cssText) ||
+         /:root/.test(rule.selectorText)){
+        out.push(rule.cssText);
+      }
+    }
+  }
+  // Always include :root tokens (navy/gold etc.) so the standalone file renders correctly
+  return out.join('\n');
+}
+
+/* ---------- mobile tab toggle ---------- */
+document.querySelectorAll('#tabToggle button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('#tabToggle button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    const app = document.getElementById('app');
+    app.classList.remove('form-mode','preview-mode');
+    app.classList.add(b.dataset.mode + '-mode');
+  });
+});
+
+/* ---------- init ---------- */
+function rerenderAll(){
+  // re-populate all inputs
+  document.querySelectorAll('[data-bind]').forEach(el=>{
+    const v = getPath(state, el.getAttribute('data-bind'));
+    if(v != null) el.value = v;
+  });
+  renderPills();
+  renderToolsChips();
+  renderHighlights();
+  renderExperiences();
+  renderRadar();
+  renderPreview();
+}
+
+bindInputs();
+rerenderAll();
+</script>
+</body>
+</html>
